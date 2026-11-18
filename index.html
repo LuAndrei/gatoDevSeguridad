@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatOS - Gato Dev Workspace</title>
+    <style>
+        :root {
+            --bg-color: #FDF8F2;
+            --panel-bg: #FFF6EC;
+            --border-color: #3D291E;
+            --text-main: #3D291E;
+            --accent-orange: #E67E22;
+            --accent-green: #27AE60;
+            --accent-pink: #E91E63;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Sans MS', 'Bubblegum Sans', 'Segoe UI', cursive, sans-serif;
+            user-select: none;
+        }
+
+        /* Barras de desplazamiento personalizadas estilo acogedor */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #E5D4BE;
+            border-radius: 6px;
+            border: 2px solid #3D291E;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D3B59D;
+            border-radius: 6px;
+            border: 2px solid #3D291E;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #E67E22;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        .desktop-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Barra superior de estado */
+        .top-bar {
+            height: 50px;
+            background-color: #3D291E;
+            color: #FFF6EC;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 4px solid #2B1D14;
+            z-index: 1000;
+            flex-shrink: 0;
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .stat-badge {
+            background: #FFF6EC;
+            color: #3D291E;
+            padding: 4px 12px;
+            border-radius: 15px;
+            border: 2px solid #3D291E;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .boss-btn {
+            background-color: #C0392B;
+            color: white;
+            border: 2px solid #FFF6EC;
+            padding: 5px 14px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .boss-btn:hover {
+            transform: scale(1.05);
+            background-color: #E74C3C;
+        }
+
+        /* Estructura principal con barra lateral y área deslizable */
+        .main-layout {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Dock de aplicaciones lateral */
+        .dock {
+            width: 85px;
+            background-color: #E6D5C3;
+            border-right: 4px solid #3D291E;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            gap: 20px;
+            z-index: 500;
+            flex-shrink: 0;
+        }
+
+        .dock-icon {
+            width: 60px;
+            height: 60px;
+            background: #FFF6EC;
+            border: 3px solid #3D291E;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 4px 0 #3D291E;
+            transition: all 0.1s ease;
+        }
+
+        .dock-icon:hover {
+            transform: translateY(-3px);
+            background-color: #FFF;
+        }
+
+        .dock-icon:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #3D291E;
+        }
+
+        .dock-icon span {
+            font-size: 9px;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+
+        /* Área de trabajo con scroll vertical y horizontal (para ir a los costados) */
+        .workspace-scroll-area {
+            flex: 1;
+            overflow: auto; /* Permite barras de desplazamiento arriba/abajo y a los costados */
+            position: relative;
+            background-image: radial-gradient(#E5D4BE 15%, transparent 16%), radial-gradient(#E5D4BE 15%, transparent 16%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            background-color: #FDF8F2;
+        }
+
+        /* Lienzo grande que contiene las ventanas ordenadas con espacio para hacer scroll a los lados */
+        .workspace-canvas {
+            width: 1400px; /* Ancho amplio para navegar horizontalmente */
+            height: 900px; /* Alto amplio para navegar verticalmente */
+            position: relative;
+        }
+
+        /* Ventanas flotantes estilo tarjeta */
+        .window {
+            position: absolute;
+            background: var(--panel-bg);
+            border: 4px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 6px 6px 0px rgba(61, 41, 30, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .window.hidden {
+            display: none !important;
+        }
+
+        .window-header {
+            background-color: var(--border-color);
+            color: #FFF6EC;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .window-btn {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #FFF6EC;
+            cursor: pointer;
+        }
+
+        .btn-close { background-color: #E74C3C; }
+        .btn-min { background-color: #F1C40F; }
+
+        .window-body {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Posiciones distribuidas en el lienzo grande (permite scroll horizontal y vertical) */
+        #terminal-window {
+            top: 40px;
+            left: 50px;
+            width: 500px;
+            height: 390px;
+        }
+
+        #chat-window {
+            top: 40px;
+            left: 580px;
+            width: 450px;
+            height: 420px;
+        }
+
+        #flix-window {
+            top: 460px;
+            left: 50px;
+            width: 500px;
+            height: 350px;
+        }
+
+        /* Terminal CyberSec */
+        .terminal-screen {
+            background: #1E120B;
+            color: #2ECC71;
+            font-family: 'Courier New', monospace;
+            padding: 12px;
+            border-radius: 8px;
+            height: 230px;
+            overflow-y: auto;
+            font-size: 13px;
+            border: 2px solid #3D291E;
+        }
+
+        .terminal-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .game-btn {
+            background: var(--accent-orange);
+            color: white;
+            border: 3px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 0 var(--border-color);
+        }
+
+        .game-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 var(--border-color);
+        }
+
+        /* MiauChat */
+        .chat-container {
+            display: grid;
+            grid-template-columns: 130px 1fr;
+            height: 100%;
+            gap: 10px;
+        }
+
+        .chat-list {
+            border-right: 2px dashed #3D291E;
+            padding-right: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .chat-contact {
+            padding: 8px;
+            background: #FFF;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .chat-contact.active, .chat-contact:hover {
+            background: #FCE4D6;
+            border-color: var(--accent-orange);
+        }
+
+        .chat-box {
+            display: flex;
+            flex-direction: column;
+            height: 310px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            background: #FFF;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .msg {
+            padding: 6px 10px;
+            border-radius: 8px;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .msg.incoming {
+            background: #EAE3D9;
+            align-self: flex-start;
+            border: 1px solid #3D291E;
+        }
+
+        .msg.outgoing {
+            background: #FCE4D6;
+            align-self: flex-end;
+            border: 1px solid var(--accent-orange);
+        }
+
+        .chat-input-area {
+            margin-top: 8px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 6px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            outline: none;
+            font-size: 12px;
+        }
+
+        .chat-input-area button {
+            background: var(--accent-orange);
+            color: white;
+            border: 2px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* CatFlix */
+        .flix-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .movie-screen {
+            width: 100%;
+            height: 170px;
+            background: #111;
+            border: 3px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 15px;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .movie-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="desktop-container">
+        <!-- Barra Superior -->
+        <div class="top-bar">
+            <div class="stats-container">
+                <div class="stat-badge">🌰 <span id="bellotas-count">14,989</span></div>
+                <div class="stat-badge">⭐ <span id="nivel-count">Nivel 2</span></div>
+            </div>
+            <div style="font-weight: bold; font-size: 14px;">💻 CatOS v2.6 - Gato Dev Workstation</div>
+            <button class="boss-btn" onclick="activarAlertaJefe()">🚨 ¡Peligro Jefe!</button>
+        </div>
+
+        <div class="main-layout">
+            <!-- Barra Lateral (Dock) -->
+            <div class="dock">
+                <div class="dock-icon" onclick="toggleWindow('terminal-window')">
+                    🛡️
+                    <span>Trabajo</span>
+                </div>
+                <div class="dock-icon" onclick="toggleWindow('chat-window')">
+                    💬
+                    <span>Chat</span>
+                </div>
+                <div class="dock-icon" onclick="toggleWindow('flix-window')">
+                    🍿
+                    <span>CatFlix</span>
+                </div>
+            </div>
+
+            <!-- Área con barras de desplazamiento (Vertical y Horizontal) -->
+            <div class="workspace-scroll-area">
+                <div class="workspace-canvas" id="workspace-canvas">
+
+                    <!-- Ventana 1: Terminal de Ciberseguridad -->
+                    <div class="window" id="terminal-window">
+                        <div class="window-header">
+                            <span>🛡️ CyberShield Terminal</span>
+                            <div class="window-controls">
+                                <div class="window-btn btn-min" onclick="hideWindow('terminal-window')"></div>
+                                <div class="window-btn btn-close" onclick="hideWindow('terminal-window')"></div>
+                            </div>
+                        </div>
+                        <div class="window-body">
+                            <div class="terminal-screen" id="terminal-output">
+                                [Sistema] CatOS CyberSec en línea...<br>
+                                [Firewall] 3 amenazas detectadas en red de oficina.<br>
+                                > Haz clic en "Escanear" para limpiar paquetes maliciosos.
+                            </div>
+                            <div class="terminal-actions">
+                                <button class="game-btn" onclick="escanearRed()">🔍 Escanear</button>
+                                <button class="game-btn" style="background:#27AE60;" onclick="bloquearAmenaza()">⚡ Bloquear (+50🌰)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ventana 2: MiauChat -->
+                    <div class="window" id="chat-window">
+                        <div class="window-header">
+                            <span>💬 MiauChat</span>
+                            <div class="window-controls">
+                                <div class="window-btn btn-min" onclick="hideWindow('chat-window')"></div>
+                                <div class="window-btn btn-close" onclick="hideWindow('chat-window')"></div>
+                            </div>
+                        </div>
+                        <div class="window-body">
+                            <div class="chat-container">
+                                <div class="chat-list">
+                                    <div class="chat-contact active" onclick="cambiarChat('pareja', 'Michi Amor ❤️')">Michi Amor ❤️</div>
+                                    <div class="chat-contact" onclick="cambiarChat('mama', 'Mamá Gata 🧶')">Mamá Gata 🧶</div>
+                                    <div class="chat-contact" onclick="cambiarChat('oficina', 'Oficina 🐸🐰')">Oficina 🐸🐰</div>
+                                </div>
+                                <div class="chat-box">
+                                    <div class="chat-messages" id="chat-messages">
+                                        <div class="msg incoming"><b>Michi Amor:</b> ¿Vuelves temprano a casa amor? 🐟</div>
+                                    </div>
+                                    <div class="chat-input-area">
+                                        <input type="text" id="chat-input" placeholder="Mensaje..." onkeypress="if(event.key === 'Enter') enviarMensaje()">
+                                        <button onclick="enviarMensaje()">Enviar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ventana 3: CatFlix -->
+                    <div class="window" id="flix-window">
+                        <div class="window-header">
+                            <span>🍿 CatFlix - Series</span>
+                            <div class="window-controls">
+                                <div class="window-btn btn-min" onclick="hideWindow('flix-window')"></div>
+                                <div class="window-btn btn-close" onclick="hideWindow('flix-window')"></div>
+                            </div>
+                        </div>
+                        <div class="window-body">
+                            <div class="flix-content">
+                                <div class="movie-screen" id="movie-screen">
+                                    📺 Reproduciendo:<br><b>"Stranger Whiskers: Temp 4"</b>
+                                </div>
+                                <div class="movie-controls">
+                                    <button class="game-btn" onclick="cambiarSerie('Stranger Whiskers 🐾')">Stranger W.</button>
+                                    <button class="game-btn" style="background:#8E44AD;" onclick="cambiarSerie('La Casa de Atún 🐟')">Casa Atún</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let bellotas = 14989;
+        let chatActual = 'pareja';
+        const historialChats = {
+            pareja: [
+                { remitente: 'incoming', texto: '¿Vuelves temprano a casa amor? 🐟' }
+            ],
+            mama: [
+                { remitente: 'incoming', texto: '¡Hola hijo! Comete todo el pescado del tupper.' }
+            ],
+            oficina: [
+                { remitente: 'incoming', texto: 'Coneja Diseño: ¿Pasaron el archivo a Construct 3?' }
+            ]
+        };
+
+        function toggleWindow(id) {
+            const win = document.getElementById(id);
+            if (win.classList.contains('hidden')) {
+                win.classList.remove('hidden');
+                win.style.zIndex = ++window.ziCounter || 10;
+            } else {
+                win.classList.add('hidden');
+            }
+        }
+
+        window.ziCounter = 10;
+
+        function hideWindow(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function escanearRed() {
+            const screen = document.getElementById('terminal-output');
+            screen.innerHTML += `<br>[Escaneo] Analizando puertos seguros... 2 vulnerables.`;
+            screen.scrollTop = screen.scrollHeight;
+        }
+
+        function bloquearAmenaza() {
+            bellotas += 50;
+            document.getElementById('bellotas-count').innerText = bellotas.toLocaleString();
+            const screen = document.getElementById('terminal-output');
+            screen.innerHTML += `<br><span style="color:#F1C40F;">[Éxito] Troyano neutralizado. +50 🌰</span>`;
+            screen.scrollTop = screen.scrollHeight;
+        }
+
+        function cambiarChat(id, nombre) {
+            chatActual = id;
+            document.querySelectorAll('.chat-contact').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            renderizarMensajes();
+        }
+
+        function renderizarMensajes() {
+            const box = document.getElementById('chat-messages');
+            box.innerHTML = '';
+            historialChats[chatActual].forEach(m => {
+                box.innerHTML += `<div class="msg ${m.remitente}"><b>${m.remitente === 'outgoing' ? 'Tú: ' : ''}</b>${m.texto}</div>`;
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function enviarMensaje() {
+            const input = document.getElementById('chat-input');
+            if (!input.value.trim()) return;
+            
+            historialChats[chatActual].push({ remitente: 'outgoing', texto: input.value });
+            input.value = '';
+            renderizarMensajes();
+
+            setTimeout(() => {
+                if(chatActual === 'pareja') historialChats.pareja.push({ remitente: 'incoming', texto: '¡Te espero con un cafecito gatuno ☕!' });
+                if(chatActual === 'mama') historialChats.mama.push({ remitente: 'incoming', texto: '¡Qué orgullosa estoy de ti mi vida!' });
+                if(chatActual === 'oficina') historialChats.oficina.push({ remitente: 'incoming', texto: 'Rana Dev: ¡La animación ya quedó joya 🐸!' });
+                renderizarMensajes();
+            }, 1000);
+        }
+
+        function cambiarSerie(nombre) {
+            document.getElementById('movie-screen').innerHTML = `📺 Reproduciendo:<br><b>"${nombre}"</b>`;
+        }
+
+        function activarAlertaJefe() {
+            hideWindow('chat-window');
+            hideWindow('flix-window');
+            const term = document.getElementById('terminal-window');
+            term.classList.remove('hidden');
+            term.style.zIndex = 999;
+            alert("¡CUIDADO! El Jefe León vigila. ¡A trabajar en la terminal!");
+        }
+    </script>
+</body>
+</html>
